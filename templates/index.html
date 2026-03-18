@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CFG ↔ PDA Converter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>CFG ↔ PDA Converter</h1>
+    <p>Convert between Context-Free Grammars and Pushdown Automata instantly</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('cfg')" id="tab-cfg">CFG → PDA</button>
+    <button class="tab-btn" onclick="switchTab('pda')" id="tab-pda">PDA → CFG</button>
+  </div>
+
+  <!-- ════════ CFG → PDA Form ════════ -->
+  <div id="cfg-section">
+    <div class="card">
+      <h2><span class="icon">G</span> Context-Free Grammar</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Variables (comma-separated)</label>
+          <input type="text" id="cfg-vars" placeholder="S, A, B" />
+        </div>
+        <div class="form-group">
+          <label>Terminals (comma-separated)</label>
+          <input type="text" id="cfg-terms" placeholder="a, b" />
+        </div>
+        <div class="form-group">
+          <label>Start Variable</label>
+          <input type="text" id="cfg-start" placeholder="S" />
+        </div>
+      </div>
+
+      <div class="form-group full" style="margin-top:20px">
+        <label>Productions  <span style="font-weight:400;color:var(--text2);text-transform:none">(use ε for epsilon, | for alternatives)</span></label>
+        <div class="dynamic-rows" id="cfg-productions">
+          <div class="row-item">
+            <input type="text" placeholder="S" class="prod-lhs" style="max-width:70px" />
+            <span class="arrow">→</span>
+            <input type="text" placeholder="aSb | ε" class="prod-rhs" />
+            <button class="remove-btn" onclick="removeRow(this)">×</button>
+          </div>
+        </div>
+        <button class="add-btn" onclick="addProduction()">+ Add Production</button>
+      </div>
+
+      <button class="convert-btn" onclick="convertCFG()">⚡  Convert to PDA</button>
+    </div>
+  </div>
+
+  <!-- ════════ PDA → CFG Form ════════ -->
+  <div id="pda-section" class="hidden">
+    <div class="card">
+      <h2><span class="icon">P</span> Pushdown Automaton</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>States (comma-separated)</label>
+          <input type="text" id="pda-states" placeholder="q0, q1, q2" />
+        </div>
+        <div class="form-group">
+          <label>Input Alphabet</label>
+          <input type="text" id="pda-input" placeholder="a, b" />
+        </div>
+        <div class="form-group">
+          <label>Stack Alphabet</label>
+          <input type="text" id="pda-stack" placeholder="Z0, A, a, b" />
+        </div>
+        <div class="form-group">
+          <label>Start State</label>
+          <input type="text" id="pda-start-state" placeholder="q0" />
+        </div>
+        <div class="form-group">
+          <label>Initial Stack Symbol</label>
+          <input type="text" id="pda-start-stack" placeholder="Z0" />
+        </div>
+        <div class="form-group">
+          <label>Accept States <span style="font-weight:400;text-transform:none">(blank = empty stack)</span></label>
+          <input type="text" id="pda-accept" placeholder="q2" />
+        </div>
+      </div>
+
+      <div class="form-group full" style="margin-top:20px">
+        <label>Transitions  <span style="font-weight:400;color:var(--text2);text-transform:none">(use ε for epsilon)</span></label>
+        <div class="trans-labels">
+          <span>State</span><span>Input</span><span>Pop</span><span>Next State</span><span>Push</span><span></span>
+        </div>
+        <div class="dynamic-rows" id="pda-transitions">
+          <div class="trans-row">
+            <input type="text" placeholder="q0" class="t-state" />
+            <input type="text" placeholder="a" class="t-input" />
+            <input type="text" placeholder="Z0" class="t-pop" />
+            <input type="text" placeholder="q1" class="t-next" />
+            <input type="text" placeholder="AZ0" class="t-push" />
+            <button class="remove-btn" onclick="removeRow(this)">×</button>
+          </div>
+        </div>
+        <button class="add-btn" onclick="addTransition()">+ Add Transition</button>
+      </div>
+
+      <button class="convert-btn" onclick="convertPDA()">⚡  Convert to CFG</button>
+    </div>
+  </div>
+
+  <!-- ════════ Result ════════ -->
+  <div id="result-card" class="result-card"></div>
+  <div id="error-box" class="error-box"></div>
+
+</div>
+
+<script>
+/* ── Tab switching ── */
+function switchTab(tab) {
+  document.getElementById('cfg-section').classList.toggle('hidden', tab !== 'cfg');
+  document.getElementById('pda-section').classList.toggle('hidden', tab !== 'pda');
+  document.getElementById('tab-cfg').classList.toggle('active', tab === 'cfg');
+  document.getElementById('tab-pda').classList.toggle('active', tab === 'pda');
+  document.getElementById('result-card').classList.remove('show');
+  document.getElementById('error-box').classList.remove('show');
+}
+
+/* ── Dynamic rows ── */
+function addProduction() {
+  const container = document.getElementById('cfg-productions');
+  const div = document.createElement('div');
+  div.className = 'row-item';
+  div.innerHTML = `
+    <input type="text" placeholder="A" class="prod-lhs" style="max-width:70px" />
+    <span class="arrow">→</span>
+    <input type="text" placeholder="aA | ε" class="prod-rhs" />
+    <button class="remove-btn" onclick="removeRow(this)">×</button>`;
+  container.appendChild(div);
+}
+
+function addTransition() {
+  const container = document.getElementById('pda-transitions');
+  const div = document.createElement('div');
+  div.className = 'trans-row';
+  div.innerHTML = `
+    <input type="text" placeholder="q0" class="t-state" />
+    <input type="text" placeholder="a" class="t-input" />
+    <input type="text" placeholder="Z0" class="t-pop" />
+    <input type="text" placeholder="q1" class="t-next" />
+    <input type="text" placeholder="AZ0" class="t-push" />
+    <button class="remove-btn" onclick="removeRow(this)">×</button>`;
+  container.appendChild(div);
+}
+
+function removeRow(btn) {
+  const row = btn.parentElement;
+  if (row.parentElement.children.length > 1) {
+    row.style.animation = 'none';
+    row.style.opacity = '0';
+    row.style.transform = 'translateX(20px)';
+    row.style.transition = 'all .2s';
+    setTimeout(() => row.remove(), 200);
+  }
+}
+
+/* ── Helpers ── */
+function showError(msg) {
+  const box = document.getElementById('error-box');
+  box.textContent = '⚠  ' + msg;
+  box.classList.add('show');
+  document.getElementById('result-card').classList.remove('show');
+}
+
+function makeBadges(arr, cls) {
+  return arr.map(v => `<span class="badge ${cls}">${v}</span>`).join(' ');
+}
+
+/* ── CFG → PDA ── */
+async function convertCFG() {
+  const vars = document.getElementById('cfg-vars').value;
+  const terms = document.getElementById('cfg-terms').value;
+  const start = document.getElementById('cfg-start').value;
+  if (!vars || !terms || !start) return showError('Please fill in all fields.');
+
+  const rows = document.querySelectorAll('#cfg-productions .row-item');
+  const productions = [];
+  for (const r of rows) {
+    const lhs = r.querySelector('.prod-lhs').value.trim();
+    const rhs = r.querySelector('.prod-rhs').value.trim();
+    if (!lhs || !rhs) return showError('Each production needs a left-hand side and right-hand side.');
+    productions.push({ lhs, rhs });
+  }
+
+  document.getElementById('error-box').classList.remove('show');
+
+  const res = await fetch('/convert/cfg-to-pda', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ variables: vars, terminals: terms, start, productions })
+  });
+  const data = await res.json();
+  if (!data.success) return showError(data.error);
+
+  const r = data.result;
+  let html = `<h2>✅ Equivalent PDA</h2>`;
+  html += `<div class="info-grid">
+    <div class="info-box"><div class="label">States</div><div class="value">${makeBadges(r.states, 'badge-purple')}</div></div>
+    <div class="info-box"><div class="label">Input Alphabet</div><div class="value">${makeBadges(r.input_alphabet, 'badge-green')}</div></div>
+    <div class="info-box"><div class="label">Start State</div><div class="value">${r.start_state}</div></div>
+    <div class="info-box"><div class="label">Initial Stack Symbol</div><div class="value">${r.start_stack}</div></div>
+    <div class="info-box"><div class="label">Stack Alphabet</div><div class="value">${makeBadges(r.stack_alphabet, 'badge-purple')}</div></div>
+    <div class="info-box"><div class="label">Accept States</div><div class="value">${r.accept_states.length ? makeBadges(r.accept_states, 'badge-green') : 'Empty stack'}</div></div>
+  </div>`;
+  html += `<table class="result-table"><tr><th>State</th><th>Input</th><th>Pop</th><th>Next State</th><th>Push</th></tr>`;
+  for (const t of r.transitions) {
+    html += `<tr><td>${t.state}</td><td>${t.input}</td><td>${t.pop}</td><td>${t.next_state}</td><td>${t.push}</td></tr>`;
+  }
+  html += `</table>`;
+
+  const card = document.getElementById('result-card');
+  card.innerHTML = html;
+  card.classList.add('show');
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ── PDA → CFG ── */
+async function convertPDA() {
+  const states = document.getElementById('pda-states').value;
+  const inputAlpha = document.getElementById('pda-input').value;
+  const stackAlpha = document.getElementById('pda-stack').value;
+  const startState = document.getElementById('pda-start-state').value;
+  const startStack = document.getElementById('pda-start-stack').value;
+  const acceptStates = document.getElementById('pda-accept').value;
+
+  if (!states || !inputAlpha || !stackAlpha || !startState || !startStack)
+    return showError('Please fill in all required fields.');
+
+  const rows = document.querySelectorAll('#pda-transitions .trans-row');
+  const transitions = [];
+  for (const r of rows) {
+    const state = r.querySelector('.t-state').value.trim();
+    const inp = r.querySelector('.t-input').value.trim();
+    const pop = r.querySelector('.t-pop').value.trim();
+    const next = r.querySelector('.t-next').value.trim();
+    const push = r.querySelector('.t-push').value.trim();
+    if (!state || !pop || !next) return showError('Each transition needs state, pop, and next state.');
+    transitions.push({ state, input: inp || 'ε', pop, next_state: next, push: push || 'ε' });
+  }
+
+  document.getElementById('error-box').classList.remove('show');
+
+  const res = await fetch('/convert/pda-to-cfg', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      states, input_alphabet: inputAlpha, stack_alphabet: stackAlpha,
+      start_state: startState, start_stack: startStack,
+      accept_states: acceptStates, transitions
+    })
+  });
+  const data = await res.json();
+  if (!data.success) return showError(data.error);
+
+  const r = data.result;
+  let html = `<h2>✅ Equivalent CFG</h2>`;
+  html += `<div class="info-grid">
+    <div class="info-box"><div class="label">Variables</div><div class="value">${makeBadges(r.variables.slice(0, 20), 'badge-purple')}${r.variables.length > 20 ? ' <span style="color:var(--text2)">... (' + r.variables.length + ' total)</span>' : ''}</div></div>
+    <div class="info-box"><div class="label">Terminals</div><div class="value">${makeBadges(r.terminals, 'badge-green')}</div></div>
+    <div class="info-box"><div class="label">Start Symbol</div><div class="value">${r.start}</div></div>
+  </div>`;
+  html += `<table class="result-table"><tr><th>Variable</th><th>Productions</th></tr>`;
+  const sorted = Object.keys(r.productions).sort((a,b) => a === 'S' ? -1 : b === 'S' ? 1 : a.localeCompare(b));
+  for (const v of sorted) {
+    const bodies = r.productions[v];
+    if (bodies.length === 0) continue;
+    const rhs = bodies.join('  |  ');
+    html += `<tr><td>${v}</td><td>${v} → ${rhs}</td></tr>`;
+  }
+  html += `</table>`;
+
+  const card = document.getElementById('result-card');
+  card.innerHTML = html;
+  card.classList.add('show');
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+</script>
+</body>
+</html>
