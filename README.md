@@ -2,7 +2,7 @@
 
 A web-based tool to convert between **Context-Free Grammars (CFG)** and **Pushdown Automata (PDA)** instantly, built with Flask and a modern dark-themed UI.
 
-> **Live Demo:** Deployed on [Render](https://render.com) (or run locally)
+> **Live Demo:** Deployed on [Render](https://cfg-pda-convertor.onrender.com/) (or run locally)
 
 ---
 
